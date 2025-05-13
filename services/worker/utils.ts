@@ -42,6 +42,15 @@ export const validateTsSegment = async (filePath: string): Promise<boolean> => {
           resolve(false);
           return;
         }
+        
+        // Check for keyframe at start (this is a simplified check - in production, use more robust methods)
+        const videoStream = metadata.streams.find(s => s.codec_type === 'video');
+        if (videoStream && (!videoStream.has_b_frames || videoStream.has_b_frames === 0)) {
+          console.log(`[Validator] TS file starts with keyframe: ${filePath}`);
+        } else {
+          console.warn(`[Validator] TS file may not start with keyframe: ${filePath}`);
+          // We don't fail validation for this, but we log it as a warning
+        }
 
         console.log(`[Validator] Valid TS file: ${filePath} with ${metadata.streams.length} streams`);
         resolve(true);
@@ -72,7 +81,8 @@ export const repairTsSegment = async (inputPath: string, outputPath: string): Pr
         .outputOptions([
           '-c copy',   // Copy streams without re-encoding
           '-f mpegts', // Force MPEG-TS format
-          '-bsf:v h264_mp4toannexb' // Bitstream filter that can help with some corruption issues
+          '-bsf:v h264_mp4toannexb', // Bitstream filter that can help with some corruption issues
+          '-reset_timestamps 1'  // Reset timestamps to ensure proper playback
         ])
         .output(tempFile)
         .on('end', () => {

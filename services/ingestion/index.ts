@@ -93,14 +93,20 @@ function startSegmentation(streamId: string, streamKey: string) {
   // FFmpeg command to segment the stream into .ts files
   const ffmpeg = spawn('ffmpeg', [
     '-i', streamInput,
-    '-c:v', 'copy',
-    '-c:a', 'copy',
+    '-force_key_frames', `expr:gte(t,n_forced*${segmentDuration})`, // Enforce keyframes at segment boundaries
+    '-c:v', 'libx264',
+    '-preset', 'veryfast',
+    '-tune', 'zerolatency',
+    '-g', (2 * segmentDuration * 30).toString(), // GOP size = 2x segment duration @ 30fps
+    '-sc_threshold', '0',
+    '-c:a', 'aac',
     '-f', 'segment',
     '-segment_time', segmentDuration.toString(),
     '-segment_format', 'mpegts',
-    // '-strftime', '1',
+    '-reset_timestamps', '1',
     path.join(segmentOutputDir, '%d.ts')
   ]);
+  
   
   // Log FFmpeg output
   ffmpeg.stdout.on('data', (data) => {

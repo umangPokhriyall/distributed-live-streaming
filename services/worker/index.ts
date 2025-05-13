@@ -233,8 +233,10 @@ const transcodeSegment = (inputPath: string, outputPath: string, rendition: Stre
         '-profile:v main',
         '-level 3.1',
         '-sc_threshold 0',
-        '-g 48', // keyframe interval, 48 is a common value (2 seconds at 24fps)
-        '-f mpegts'
+        '-force_key_frames', `expr:gte(t,n_forced*${config.streaming.segmentDuration})`,
+        '-g', (2 * config.streaming.segmentDuration * fps).toString(),
+        '-f mpegts',
+        '-reset_timestamps 1'
       ]);
 
     // Add event listeners

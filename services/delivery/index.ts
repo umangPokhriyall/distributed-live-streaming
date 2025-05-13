@@ -109,13 +109,14 @@ app.get('/streams/:streamId/playlist.m3u8', (req, res) => {
     // Generate master playlist
     let masterPlaylist = '#EXTM3U\n';
     masterPlaylist += '#EXT-X-VERSION:3\n';
+    masterPlaylist += '#EXT-X-INDEPENDENT-SEGMENTS\n';
     
     // Add each rendition
     for (const rendition of renditions) {
       const renditionInfo = config.streaming.defaultRenditions.find(r => r.name === rendition);
       
       if (renditionInfo) {
-        masterPlaylist += `#EXT-X-STREAM-INF:BANDWIDTH=${renditionInfo.videoBitrate * 1000},RESOLUTION=${renditionInfo.width}x${renditionInfo.height}\n`;
+        masterPlaylist += `#EXT-X-STREAM-INF:BANDWIDTH=${renditionInfo.videoBitrate * 1000},RESOLUTION=${renditionInfo.width}x${renditionInfo.height},FRAME-RATE=${renditionInfo.fps},CODECS="avc1.4d001f,mp4a.40.2"\n`;
         masterPlaylist += `${rendition}/playlist.m3u8\n`;
       }
     }
@@ -183,6 +184,8 @@ app.get('/streams/:streamId/:rendition/playlist.m3u8', (req, res) => {
     playlist += '#EXT-X-VERSION:3\n';
     playlist += `#EXT-X-TARGETDURATION:${config.streaming.segmentDuration}\n`;
     playlist += `#EXT-X-MEDIA-SEQUENCE:${segments[0]}\n`;
+    playlist += '#EXT-X-INDEPENDENT-SEGMENTS\n';  // Indicates segments start with keyframes
+    playlist += '#EXT-X-ALLOW-CACHE:YES\n';       // Allow caching for better performance
     
     // Add each segment - only include segments that exist
     for (const segmentNumber of segments) {
