@@ -9,7 +9,7 @@ import { StreamRendition, TranscodingJob, WorkerStatus } from '../../shared/type
 import { validateTsSegment, repairTsSegment } from './utils';
 
 // Store worker configuration
-let workerId: string | null = null;
+let workerId: string = 'worker-1';
 const ipAddress = '127.0.0.1'; // Replace with actual IP detection or command line argument
 let isProcessing = false;
 
@@ -50,17 +50,17 @@ const registerWorker = async () => {
   try {
     const capabilities = detectCapabilities();
     
-    const response = await axios.post(`http://${config.redis.host}:${config.ports.orchestrator}/workers/register`, {
+    const response = await axios.post(`http://${config.redis.host}:${config.ports.orchestrator}/workers/register/${workerId}`, {
       capabilities,
       ipAddress
     });
     console.log('[Worker] Response:', response.data);
     
-    workerId = response.data.workerId;
+    // workerId = response.data.workerId;  // Commented out since we're using hardcoded ID
     console.log(`[Worker] Registered with orchestrator. Worker ID: ${workerId}`);
     
     // Create temporary directory for processing
-    const tempDir = path.join(config.storagePaths.temp, workerId as string);
+    const tempDir = path.join(config.storagePaths.temp, workerId);
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
@@ -127,7 +127,7 @@ const processJob = async (jobId: string, job: TranscodingJob) => {
   const outputPath = job.outputPath;
   
   // Create temporary directory
-  const tempDir = path.join(config.storagePaths.temp, workerId as string);
+  const tempDir = path.join(config.storagePaths.temp, workerId);
   const tempOutputPath = path.join(tempDir, `${uuidv4()}.ts`);
   
   try {

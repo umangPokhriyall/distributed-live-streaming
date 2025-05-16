@@ -8,6 +8,9 @@ const config = {
   // Node environment
   env: process.env.NODE_ENV || 'development',
   
+  // Demo mode
+  demoMode: process.env.ENABLE_DEMO === 'true' || false, // Only enable when explicitly requested
+  
   // Server ports
   ports: {
     api: parseInt(process.env.API_PORT || '3000', 10),

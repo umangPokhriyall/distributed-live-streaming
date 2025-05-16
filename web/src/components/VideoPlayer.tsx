@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 import '@videojs/http-streaming';
+import { Button } from './ui/button';
 
 interface VideoPlayerProps {
   streamId: string;
@@ -42,7 +43,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (!playerRef.current) {
       // The Video.js player needs to be initialized once the element is available
       const videoElement = document.createElement('video-js');
-      videoElement.classList.add('vjs-big-play-centered');
+      videoElement.classList.add('vjs-big-play-centered', 'vjs-theme-forest');
       
       if (videoRef.current) {
         videoRef.current.appendChild(videoElement);
@@ -136,15 +137,38 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }, [streamId, autoplay, controls, fluid, width, height, serverPort, retryCount]);
 
   return (
-    <div>
-      <div data-vjs-player>
-        <div ref={videoRef} className="video-container" />
+    <div className="rounded-lg overflow-hidden border border-border/50 bg-card shadow-md">
+      <div data-vjs-player className="aspect-video">
+        <div ref={videoRef} className="video-container w-full h-full" />
       </div>
       {playerError && (
-        <div style={{ color: 'red', marginTop: '10px' }}>
-          {playerError}
+        <div className="p-4 bg-destructive/10 text-destructive text-sm">
+          <div className="font-medium">Stream Error</div>
+          <div className="mt-1">{playerError}</div>
           {retryCount > 0 && retryCount <= MAX_RETRIES && (
-            <div>Retrying playback ({retryCount}/{MAX_RETRIES})...</div>
+            <div className="mt-2 text-muted-foreground flex items-center">
+              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent"></div>
+              <span>Retrying playback ({retryCount}/{MAX_RETRIES})...</span>
+            </div>
+          )}
+          {retryCount >= MAX_RETRIES && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-2" 
+              onClick={() => {
+                setRetryCount(0);
+                if (playerRef.current) {
+                  playerRef.current.src({
+                    src: getStreamUrl(streamId),
+                    type: 'application/x-mpegURL'
+                  });
+                  playerRef.current.load();
+                }
+              }}
+            >
+              Try Again
+            </Button>
           )}
         </div>
       )}

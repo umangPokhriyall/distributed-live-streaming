@@ -1,0 +1,112 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int              @id @default(autoincrement())
+  walletAddress   String           @unique
+  role            UserRole
+  name            String?
+  createdAt       DateTime         @default(now()) @map("created_at")
+  deposits        Deposit[]
+  transcodingJobs TranscodingJob[] @relation("WorkerJobs")
+  earnings        WorkerEarnings?
+  withdrawals     Withdrawal[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  STREAMER
+  WORKER
+}
+
+model Deposit {
+  id                   Int      @id @default(autoincrement())
+  userId               Int      @map("user_id")
+  amount               Decimal  @db.Decimal(12, 6)
+  transactionSignature String?  @map("transaction_signature")
+  createdAt            DateTime @default(now()) @map("created_at")
+  user                 User     @relation(fields: [userId], references: [id])
+
+  @@map("deposits")
+}
+
+model TranscodingJob {
+  id            Int       @id @default(autoincrement())
+  streamId      String    @map("stream_id")
+  segmentNumber Int       @map("segment_number")
+  rendition     String
+  workerId      Int?      @map("worker_id")
+  status        JobStatus
+  paymentAmount Decimal?  @map("payment_amount") @db.Decimal(12, 6)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  completedAt   DateTime? @map("completed_at")
+  worker        User?     @relation("WorkerJobs", fields: [workerId], references: [id])
+
+  @@map("transcoding_jobs")
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model WorkerEarnings {
+  workerId         Int     @id @map("worker_id")
+  totalEarned      Decimal @default(0) @map("total_earned") @db.Decimal(12, 6)
+  totalWithdrawn   Decimal @default(0) @map("total_withdrawn") @db.Decimal(12, 6)
+  availableBalance Decimal @default(0) @map("available_balance") @db.Decimal(12, 6)
+  worker           User    @relation(fields: [workerId], references: [id])
+
+  @@map("worker_earnings")
+}
+
+model Withdrawal {
+  id                   Int              @id @default(autoincrement())
+  workerId             Int              @map("worker_id")
+  amount               Decimal          @db.Decimal(12, 6)
+  transactionSignature String?          @map("transaction_signature")
+  status               WithdrawalStatus
+  createdAt            DateTime         @default(now()) @map("created_at")
+  processedAt          DateTime?        @map("processed_at")
+  worker               User             @relation(fields: [workerId], references: [id])
+
+  @@map("withdrawals")
+}
+
+enum WithdrawalStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model Stream {
+  id           String    @id
+  streamKey    String    @unique @map("stream_key")
+  title        String?
+  description  String?
+  thumbnailUrl String?   @map("thumbnail_url")
+  streamerId   Int       @map("streamer_id")
+  isLive       Boolean   @default(false) @map("is_live")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  startedAt    DateTime? @map("started_at")
+  endedAt      DateTime? @map("ended_at")
+  totalCost    Decimal?  @map("total_cost") @db.Decimal(12, 6)
+
+  @@map("streams")
+}

@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import IORedis from 'ioredis';
 import config from '../shared/config';
 import { Stream } from '../shared/types';
+import { PrismaClient } from '@prisma/client';
 
 // Initialize Redis client
 const redisClient = new IORedis({
@@ -13,6 +14,7 @@ const redisClient = new IORedis({
   password: config.redis.password
 });
 
+
 // Create Express app
 const app = express();
 app.use(cors());
@@ -20,6 +22,7 @@ app.use(express.json());
 
 // In-memory streams storage (in production, use a database)
 const streams: Record<string, Stream> = {};
+const prisma = new PrismaClient();
 
 // API Routes
 
@@ -27,6 +30,13 @@ const streams: Record<string, Stream> = {};
 app.get('/streams', (req, res) => {
   console.log('[API] Getting all streams', streams);
   res.json(Object.values(streams));
+});
+
+// Get all streams from database
+app.get('/streams/db', async (req, res) => {
+  const streams = await prisma.stream.findMany();
+  console.log('[API] Getting all streams from database', streams);
+  res.json(streams);
 });
 
 // Get stream by ID
@@ -41,7 +51,7 @@ app.get('/streams/:streamId', (req, res) => {
 });
 
 // Create a new stream
-app.post('/streams', (req, res) => {
+app.post('/streams', async (req, res) => {
   const { title, description, userId } = req.body;
   
   if (!title || !userId) {
@@ -67,6 +77,23 @@ app.post('/streams', (req, res) => {
   
   // Store stream info
   streams[streamId] = stream;
+
+  // Store stream info in database
+  await prisma.stream.create({
+    data: {
+      id: streamId,
+      title,
+      description,  
+      streamKey,
+      isLive: false,
+      streamerId: 1,
+      createdAt: new Date(),
+      startedAt: new Date(),
+      endedAt: null,
+      totalCost: 0
+    }
+  });
+  
   
   console.log(`[API] New stream created: ${streamId} with key ${streamKey}`);
   
